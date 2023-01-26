@@ -11,7 +11,7 @@ export const AppRoutes = () => {
     <Navigator screenOptions={{ headerShown: false }}>
       <Screen name="home" component={Home} />
       <Screen name="new" component={New} />
-      <Screen name="Habit" component={Habit} />
+      <Screen name="habit" component={Habit} />
     </Navigator>
   );
 };
