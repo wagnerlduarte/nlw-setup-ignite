@@ -46,8 +46,6 @@ export const SummaryTable = () => {
             return dayjs(date).isSame(day.date, "day");
           });
 
-          console.log("dayInSummary: ", dayInSummary);
-
           return (
             <HabitDay
               key={date.toString()}
