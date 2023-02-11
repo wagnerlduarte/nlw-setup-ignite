@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 import { Loading } from "../components/Loading";
 import { api } from "../lib/axios";
 import { generateProgressPercentage } from "../utils/generateProgressPercentage";
+import { HabitsEmpty } from "../components/HabitsEmpty";
+import clsx from "clsx";
 
 interface Params {
   date: string;
@@ -24,12 +26,13 @@ interface HabitsInfo {
 
 export const Habit = () => {
   const [loading, setLoading] = useState(true);
-  const [dayInfo, setdayInfo] = useState<HabitsInfo>();
+  const [dayInfo, setDayInfo] = useState<HabitsInfo>();
 
   const route = useRoute();
   const { date } = route.params as Params;
 
   const parsedDate = dayjs(date);
+  const isDateInPast = parsedDate.endOf("day").isBefore(new Date());
   const dayOfWeek = parsedDate.format("dddd");
   const dayAndMonth = parsedDate.format("DD/MM");
 
@@ -50,7 +53,7 @@ export const Habit = () => {
         },
       });
 
-      setdayInfo(response.data);
+      setDayInfo(response.data);
     } catch (error) {
       console.log(error);
 
@@ -64,24 +67,33 @@ export const Habit = () => {
   };
 
   const handleToggleHabit = async (habitId: string) => {
-    const isHabitAlreadyCompleted = dayInfo?.completedHabits.includes(habitId);
+    try {
+      const isHabitAlreadyCompleted =
+        dayInfo?.completedHabits.includes(habitId);
 
-    await api.patch(`/habits/${habitId}/toggle`);
+      await api.patch(`/habits/${habitId}/toggle`);
 
-    let completedHabits: string[] = [];
+      let completedHabits: string[] = [];
 
-    if (isHabitAlreadyCompleted) {
-      completedHabits = dayInfo!.completedHabits.filter((id) => id !== habitId);
-    } else {
-      completedHabits = [...dayInfo!.completedHabits, habitId];
+      if (isHabitAlreadyCompleted) {
+        completedHabits = dayInfo!.completedHabits.filter(
+          (id) => id !== habitId
+        );
+      } else {
+        completedHabits = [...dayInfo!.completedHabits, habitId];
+      }
+
+      setDayInfo((prev) => {
+        if (!prev) return undefined;
+
+        return { ...prev, completedHabits };
+      });
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Ops", "Não foi possível atualizar o status do hábito.");
     }
-
-    setdayInfo((prev) => {
-      if (!prev) return undefined;
-
-      return { ...prev, completedHabits };
-    });
   };
+
   useEffect(() => {
     fetchHabits();
   }, []);
@@ -107,16 +119,31 @@ export const Habit = () => {
 
         <ProgressBar progress={habitsProgress} />
 
-        <View className="mt-6">
-          {dayInfo?.possibleHabits.map((habit) => (
-            <Checkbox
-              key={habit.id}
-              title={habit.title}
-              checked={dayInfo.completedHabits.includes(habit.id)}
-              onPress={() => handleToggleHabit(habit.id)}
-            />
-          ))}
+        <View
+          className={clsx("mt-6", {
+            ["opacity-50"]: isDateInPast,
+          })}
+        >
+          {dayInfo?.possibleHabits ? (
+            dayInfo.possibleHabits.map((habit) => (
+              <Checkbox
+                key={habit.id}
+                title={habit.title}
+                checked={dayInfo.completedHabits.includes(habit.id)}
+                disabled={isDateInPast}
+                onPress={() => handleToggleHabit(habit.id)}
+              />
+            ))
+          ) : (
+            <HabitsEmpty />
+          )}
         </View>
+
+        {isDateInPast && (
+          <Text className="text-white mt-10 text-center">
+            Você não pode editar hábitos de uma data passada
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
